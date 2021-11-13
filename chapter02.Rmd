@@ -1,0 +1,260 @@
+---
+title: "Equity Valuation in R"
+author: "Ruzaini Amiraa Roslan"
+date: "9/28/2021"
+output: html_document
+---
+
+[Link to original course](https://learn.datacamp.com/courses/equity-valuation-in-r)
+
+# Chapter 2: Perpetuity Growth Rate, Analyzing Projections, and Using a Dividend Discount Model
+One of the critical components of free cash flow to equity valuation is using reliable projections. In the first part of this chapter, we will discuss ways to analyze the projections to help us identify the right questions to ask. In the second part of this chapter, we will go through the second of our discounted cash flow models - the dividend discount model. In this approach, we discount expected dividends instead of free cash flows.
+
+## Analyzing the Projections
+
+<video width="720" controls>
+	<source src="video/video2_01.mp4" type="video/mp4">
+</video>
+
+## Analyze Revenue Trends - Bar Chart
+
+### Exercise
+One of the simplest but often neglected approaches to check the data is through visual inspection. In this exercise, you will create a bar chart of the revenue projections. Currently, the data is stored into two vectors, `hist_rev` (historical data) and `rev_proj` (projected data). We do this so that we can format the bar chart to make clear the distinction between actual revenues versus forecasted revenues.
+
+```{r echo=TRUE}
+hist_rev <- c(86.8, 89.0, 93.0, 128.6, 176.4, 171.4, 214.2, 236.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+rev_proj <- c(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 193.2, 212.9, 225.0, 279.2, 295.9)
+```
+
+### Instructions
+
+* Use `rbind()` to combine the vectors `hist_rev` and `rev_proj` and assign it to `rev_split`.
+* Rename column headers of `rev_split` from 2009 to 2021.
+* Create a bar chart of the data in `rev_split`, color the bars red and blue, and add the title "Historical vs. Projected Revenues".
+
+```{r echo=TRUE}
+# Combine hist_rev and rev_proj
+rev_split <- rbind(hist_rev, rev_proj)
+
+# Rename the column headers
+colnames(rev_split) <- seq(2009, 2021, 1)
+
+# Create a bar plot of the data
+barplot(rev_split,
+        col = c("red", "blue"),
+        main = "Historical vs. Projected Revenues")
+legend("topleft",
+       legend = c("Historical", "Projected"),
+       fill = c("red", "blue"))
+```
+
+Nice job! R allows you a lot to add a lot of features to charts. You can play around with various chart features to see what you think looks nice.
+
+## Analyze Revenue Trends - Regression
+
+### Exercise
+Sometimes it is difficult to spot differences by simply eyeballing the data. A slightly more sophisticated tool to determine changes in the data is regression analysis. In this exercise, you will use regression analysis to determine whether the revenue trend has shifted between the historical period and the projection period. A statistically significant shift variable is not necessarily an indicator of bad projections, but it tells us that we may want to dig deeper to find a rationale for the shift in the trend. For this exercise, the data frame `rev_all` which is stored in memory, contains the historical revenues (first 8 years) and projected revenues (last 5 years) under the `rev_proj` variable name.
+
+Note: A typical threshold for statistical significance is if the p-value of the trend variable is less than or equal to 0.10.
+
+```{r echo=TRUE}
+rev_all <- data.frame(rev_proj = c(86.8, 89.0, 93.0, 128.6, 176.4, 171.4, 214.2, 236.0, 193.2, 212.9, 225.0, 279.2, 295.9))
+```
+
+### Instructions
+
+* Create a `trend` variable for historical and projected revenues.
+* Create a trend `shift` variable that identifies the projection period.
+* Regress revenue projections (`rev_proj`) on the `trend` and `shift` variables, using the `rev_all` data.
+* Print the summary of `reg`.
+
+```{r echo=TRUE}
+# Create a trend variable
+rev_all$trend <- seq(1, nrow(rev_all), 1)
+
+# Create shift variable
+rev_all$shift <- c(rep(0, 8), rep(1, 5))
+
+# Run regression
+reg <- lm(rev_proj ~ trend + shift, data = rev_all)
+
+# Print regression summary
+summary(reg)
+```
+
+Awesome! Ultimately, these techniques help us ask the right questions about the projections, so determining the reliability of projections doesn't stop here.
+
+## Perpetuity Growth Rate
+
+<video width="720" controls>
+	<source src="video/video2_02.mp4" type="video/mp4">
+</video>
+
+## Calculate Retention Ratio
+
+### Exercise
+A large percentage of the firm's value is often found in the terminal value. The terminal value, in turn, is influenced by The perpetuity growth rate (PGR) that you assume. Thus, the PGR should be tested against economic reality. To do so, one can use rules of thumb, such as the PGR cannot be greater than the projected long-term growth rate of the overall economy. The reason for this is that a PGR greater than the growth rate of the economy into perpetuity implies that the company will become the entire economy in the future, which is not a reasonable assumption.
+
+Alternatively, there are consistency checks that one can employ. In particular, we want to make sure the PGR we use is consistent with the reinvestment rate and return on equity projections during the terminal period. The PGR should be sustainable over the very long term, so one can think of this rate as a growth rate that can be sustained by the normal operations of the firm into perpetuity (i.e., no external financing will be provided). This implies that the growth is a function of the portion of the firm's earnings that are reinvested back into the firm and how much those new investments are expected to return.
+
+The first component of this calculation is the retention ratio, which is the amount of reinvestment divided by the after-tax income. The objects `after_tax_income`, `depn_amort`, `incr_wc`, and `capex` for the 2017 to 2021 projections are stored in memory. For purposes of this analysis, assume the retention ratio is calculated using the last year's projections (i.e., use the fifth element of the vector).
+
+```{r echo=TRUE}
+after_tax_income <- c(22.8, 24.0, 30.6, 38.4, 43.2)
+depn_amort <- c(11, 12, 12, 14, 15)
+incr_wc <- c(16, 16, 14, 14, 14)
+capex <- c(11, 11, 12, 14, 15)
+```
+
+### Instructions
+
+* Calculate the amount of reinvestment.
+* Calculate the retention ratio.
+
+*Note: Use the last year's projections (the fifth element of the vector).*
+
+```{r echo=TRUE}
+# Calculate reinvestment amount
+reinvestment <- capex[5] + incr_wc[5] - depn_amort[5]
+reinvestment
+
+# Calculate retention ratio
+retention_ratio <- reinvestment / after_tax_income[5]
+retention_ratio
+```
+
+Great job! Remember that there is no free lunch - for you to get growth, you have to pay for it.
+
+## Perpetuity Growth Rate Calculation
+
+### Exercise
+Once you calculate the retention ratio, we would multiply this by the return on new invested capital to arrive at the expected growth rate. For this exercise, assume that the return on new invested capital is equal to your cost of equity `ke` of 10.5%. A rationale for this assumption is that in a competitive market you only earn a return equal to your cost of capital, because in equilibrium you would expect that firms will not generate excess profits. Use the `retention_ratio` you calculated in the prior exercise to calculate the expected growth rate.
+
+### Instructions
+Calculate the expected growth rate.
+
+```{r echo=TRUE}
+ke <- 0.105
+
+# Calculate expected growth rate
+exp_growth_rate <- retention_ratio * ke
+exp_growth_rate
+```
+
+Good work! You may have noticed by now, in finance, we often call the same thing by many names. Expected growth rate, sustainable growth rate, and perpetuity growth rate, they are pretty much the same thing.
+
+## Dividend Discount Model
+
+<video width="720" controls>
+	<source src="video/video2_03.mp4" type="video/mp4">
+</video>
+
+## Valuing Preferred Stock
+
+### Exercise
+Suppose you are considering investing in a preferred stock with a stated value (`stated_value`) of $25, dividend rate (`div_rate`) of 5%, and cost of preferred equity (`kp`) of 10%. The cost of preferred equity is the rate used to discount cash flows generated by the preferred stock. Assuming that the growth rate of the preferred dividends is zero, what is the value of the preferred stock?
+
+Note: The variables `stated value`, `div_rate`, and `kp` are stored in memory.
+
+```{r echo=TRUE}
+stated_value <- 25
+div_rate <- 0.05
+kp <- 0.1
+```
+
+### Instructions
+
+* Calculate the amount of preferred dividends.
+* Calculate the value of the preferred stock assuming no growth in preferred dividends.
+
+```{r echo=TRUE}
+# Calculate dividend of preferred stock
+div <- stated_value * div_rate
+div
+
+# Calculate value of preferred stock
+pref_value <- div / kp
+pref_value
+```
+
+Good Job!
+
+## Valuation Assuming No Dividends For First Few Years
+
+### Exercise
+Even if a firm does not pay dividends today, we could expect such firms to pay dividends in the future as the firm matures. Because of this, We can still use the dividend discount model. The idea here is that you discount what cash flows are available to the shareholder when they are available. Suppose the same company pays no dividends now until Year 5 (five years of no expected cash flows) but you expect that in Year 6 the company will begin to pay out dividends (i.e., you get cash flows from Year 6 onwards).
+
+To value the firm, we would use a two-step procedure. First, use the same formula to value the preferred stock from the last exercise to value the preferred stock when it begins to pay dividends in the future. Note that using the formula in the previous exercise, when the cash flow begins in Year 6 you end up calculating a present value as of Year 5. Second, from that future date (Year 5), we discount the preferred stock value back to the present.
+
+Assuming you own a preferred stock with a stated value (`stated_value`) of $25, dividend rate (`div_rate`) beginning in Year 6 of 5%, and cost of preferred equity (`kp`) of 10%, what is the value of the preferred stock today?
+
+### Instructions
+
+* Calculate the Year 5 value of the stock.
+* Discount the Year 5 value to the present.
+
+```{r echo=TRUE}
+# Value of Preferred if dividends start five years from now
+pref_value_yr5 <- (stated_value * div_rate) / kp
+pref_value_yr5
+
+# Value discounted to present
+pref_value <- pref_value_yr5 / (1 + kp) ^ 5
+pref_value
+```
+Good Job!
+
+## Valuation Assuming 2-Stages of Dividends
+
+### Exercise
+We can also use the dividend discount model even when the firm's dividends are not the same every year. For example, a firm can have an initial period with higher dividends while the firm is growing (1st stage), but, when the firm matures, it would lower its dividends (2nd stage). To value this type of asset, the idea is to think about how the cash flows are laid out each year and discount those cash flows back to the present. However, after you layout the cash flows, you may be able to see that you can perform some of the calculations using simplifying formulas. Specifically, in the above case, the 2nd stage where there is a lower dividend amount paid forever, you can use the Perpetuity with Growth formula you learned earlier.
+
+In the 1st stage, the high dividend payments occur for a finite period of time. We can layout the cash flows for the first few years and then discount each of those annual cash flows to the present. In the 2nd stage, we use the Perpetuity with Growth formula to value the lower dividend payments into perpetuity.
+
+In this exercise, assume that the preferred stock pays a higher dividend rate of 10% from Year 1 to 5 or $2.50 per year (`high_div`). The relevant discount rate (`kp`) for Years 1 to 5 is 10%. The present value of the dividends from Year 6 onwards, which we calculated in the prior exercise, is stored in memory as `pref_value_low`. What is the value of this preferred stock?
+
+Note: Since we add the value of an extra five years of cash flows, the value of the preferred stock in this example will be higher than the value of the preferred stock of $7.76 in the prior exercise.
+
+```{r echo=TRUE}
+high_div <- 2.5
+kp <- 0.1
+div_rate_high <- 0.1
+pref_value_low <- pref_value
+```
+
+### Instructions
+
+* Calculate preferred dividend during 1st stage.
+* Add variable for the number of discount periods.
+* Calculate discount factors.
+* Calculate present value of the dividends for Years 1 to 5.
+* Calculate present value of all cash flows from the 1st stage.
+* Add the value during 1st stage to the value of the 2nd stage (low dividend period).
+
+```{r echo=TRUE}
+# Preferred dividend in Years 1 to 5
+high_div <- stated_value * div_rate_high
+
+# Create vector of Year 1-5 dividends
+pref_cf <- rep(high_div, 5)
+
+# Convert to data frame
+pref_df <- data.frame(pref_cf)
+
+# Add discount periods
+pref_df$periods <- seq(1, 5, 1)
+
+# Calculate discount factors
+pref_df$pv_factor <- 1 / (1 + kp)^pref_df$periods
+
+# Calculate PV of dividends
+pref_df$pv_cf <- pref_df$pref_cf * pref_df$pv_factor
+
+# Calculate value during high stage
+pref_value_high <- sum(pref_df$pv_cf)
+
+# Calculate value of the preferred stock
+pref_value_low + pref_value_high
+```
+
+Good job! As a note, there are many finance formulas that attempt to give you a shortcut to calculating various DCF models. Some look complex. Just remember that, at the end of the day, they end up getting you to the same value had you simply laid out all the cash flows.

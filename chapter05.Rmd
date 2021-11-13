@@ -1,0 +1,308 @@
+---
+title: "Equity Valuation in R"
+author: "Ruzaini Amiraa Roslan"
+date: "9/28/2021"
+output: html_document
+---
+
+[Link to original course](https://learn.datacamp.com/courses/equity-valuation-in-r)
+
+# Chapter 5: Comprehensive Exercise
+This chapter combines the lessons from Chapters 1 to 4 in a series of exercises. You will be asked to inspect the data and to value the firm using discounted cash flow and relative valuation approaches. At the end, you will combine the results in a summary table.
+
+## Fundamental Valuation: Analyzing Projections
+
+<video width="720" controls>
+	<source src="video/video5_01.mp4" type="video/mp4">
+</video>
+
+## Visually Inspecting the Data
+
+### Exercise
+You are given historical revenue (`hist_rev`) and projected revenue (`proj_rev`) data for a company. Create a bar chart of data, which includes coloring the historical and projected revenues differently, as well as adding a chart title and legend. The revenue data is in the object `rev`, which is stored in memory.
+
+```{r echo=TRUE}
+hist_rev <- c(81.87, 87.82, 85.95, 89.02, 97.43, 96.78, 96.70, 0.00, 0.00, 0.00, 0.00, 0.00)
+proj_rev <- c(0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 108.45, 112.67, 120.00, 127.60, 126.06)
+rev <- rbind(hist_rev, proj_rev)
+colnames(rev) <- c(2010:2021)
+rev
+```
+
+### Instructions
+
+* Create a bar chart, color historical data red and projected data blue, and add the title "Historical vs. Projected Revenues".
+* Create a legend with data labels "Historical" and "Projected" with colors matching the bars.
+
+```{r echo=TRUE}
+# Create a bar chart
+barplot(rev,
+    col = c('red', 'blue'),
+    main = 'Historical vs. Projected Revenues')
+
+# Add legend
+legend("topleft",
+       legend = c('Historical', 'Projected'),
+       fill = c("red", "blue"))
+```
+
+Good Job!
+
+## Using Regression to Test the Projections
+
+### Exercise
+After visually inspecting the data, you decide that you also want to use regression analysis to determine whether there is a statistically significant shift in the trend from the historical revenues to the projected revenues. Recall you have to create a trend (`trend`) and a shift (`shift`) variable.
+
+For this exercise, the revenue data you created in the prior exercise is stored in the `rev` object. In that data, you will have two time series: historical revenues (`hist_rev`) and projected revenues (`proj_rev`). Historical revenues has positive values for the first 10 years of historical data and 0 for projection period. Projected revenues has 0 for the first 10 years and positive values during the projection period.
+
+### Instructions
+
+* Create a single revenue series that adds both historical and projected data.
+* Add a trend variable to `rev_all_df` using `seq()`.
+* Add a shift variable to `rev_all_df` using `ifelse()`.
+* Regress `rev_all` on `trend` and `shift`.
+
+```{r echo=TRUE}
+# Create a data frame of single series
+rev_all <- colSums(rev)
+rev_all_df <- data.frame(rev_all)
+
+# Create Trend Variable
+rev_all_df$trend <- seq(1, nrow(rev_all_df), 1)
+
+# Create Shift Variable
+rev_all_df$shift <- ifelse(rev_all_df$trend <= 7, 0, 1)
+
+# Run regression
+reg <- lm(rev_all ~ trend + shift, data = rev_all_df)
+summary(reg)
+```
+
+Great work!
+
+## Fundamental Valuation: Implementation
+
+<video width="720" controls>
+	<source src="video/video5_02.mp4" type="video/mp4">
+</video>
+
+## Cost of Equity
+
+### Exercise
+For this exercise, you are asked to calculate the CAPM cost of equity as of the end of 2016. The subject firm has a beta of 1.46, which is stored in `beta`. You will have to calculate the risk-free rate and equity risk premium based on the techniques you learned in the earlier chapters. The raw data for 10-Year US Treasuries from the Federal Reserve Electronic Database are stored in treas and the data from Professor Damodaran's [website](http://www.damodaran.com/) for the returns of the S&P 500 Index and 10-Year Treasury bond are stored in `damodaran`.
+
+```{r echo=TRUE}
+load('data/fred_10yr.rda')
+load('data/damodaran_histret.rda')
+beta <- 1.459407
+```
+
+### Instructions
+
+* Subset the US Treasury data to December 30, 2016.
+* Keep the 2nd column (yield).
+* Convert the risk-free rate from percentage terms to decimal terms.
+* Calculate the annual difference between the S&P returns and US Treasury Bond returns.
+* Calculate the average of the difference in returns.
+* Calculate the CAPM Cost of Equity.
+
+```{r echo=TRUE}
+# Subset Treasury data to 12/30/16
+rf <- subset(treas, date == "2016-12-30")
+
+# Keep 2nd column
+rf_yield <- rf[,2]
+
+# Convert to decimal terms
+rf_yield_dec <- rf_yield / 100
+rf_yield_dec
+
+# Calcualte difference between S&P 500 Return and Treasury Return
+diff <- damodaran$sp_500 - damodaran$tbond_10yr
+
+# Calculate average difference
+erp <- mean(diff)
+erp
+
+# Calculate CAPM Cost of Equity
+ke <- rf_yield_dec + beta * erp
+ke
+```
+
+Good Job!
+
+## Calculate Value During Projection Period
+
+### Exercise
+The FCFE projections are stored in the `fcfe` data frame. Now that you have an estimate for the cost of equity (`ke`) of 11.55%, calculate the value as of December 31, 2016 of the FCFE during the projection period.
+
+```{r echo=TRUE}
+fcfe <- c(14.0, 15.0, 16.0, 17.0, 17.5)
+fcfe <- as.data.frame(fcfe)
+rownames(fcfe) <- c(2017:2021)
+ke <- 0.1155
+```
+
+### Instructions
+
+* Add discount periods to `fcfe` object.
+* Calculate the discount factor for each year.
+* Calculate the present value of each cash flow.
+* Sum the PVs of each cash flow to calculate the projection period value.
+
+```{r echo=TRUE}
+# Calculate Discount Periods to 12/31/2016
+fcfe$disc_periods <- seq(1, nrow(fcfe), 1)
+
+# Calculate discount factor
+fcfe$disc_factor <- 1 / (1 + ke) ^ fcfe$disc_periods
+
+# Calculate PV of each period's total free cash flow
+fcfe$pv <- fcfe$fcfe * fcfe$disc_factor
+
+# Calculate Projection Period Value
+pv_proj_period <- sum(fcfe$pv)
+pv_proj_period
+```
+
+Good Job!
+
+## Calculate the Terminal Value
+
+### Exercise
+In this exercise, you are asked to calculate the present value of the Terminal Value using the Perpetuity with Growth formula. The FCFE projections for 2017 to 2021 are in the `fcfe` object. The perpetuity growth rate of 3.0% (`pgr`) and cost of equity of 11.55% (`ke`) are stored in memory.
+
+```{r echo=TRUE}
+fcfe <- c(14.0, 15.0, 16.0, 17.0, 17.5)
+pgr <- 0.03
+ke <- 0.1155
+```
+
+### Instructions
+
+* Extract the 2021 FCFE value from the `fcfe` data object, which is the fifth element in the object.
+* Calculate the terminal value.
+* Calculate the present value of the terminal value.
+
+```{r echo=TRUE}
+# Extract 2021 FCFE
+fcfe_2021 <- fcfe[5]
+
+# Use perpetuity with growth formula to calculate terminal value
+tv_2021 <- fcfe_2021 * (1 +pgr) / (ke - pgr)
+tv_2021
+
+# Calculate PV of Terminal Value
+pv_terminal <- tv_2021 / (1 + ke)^5
+pv_terminal
+```
+
+Well done!
+
+## Equity Value Per Free Cash Flow to Equity Model
+
+### Exercise
+Now that you have calculated the present value of the projection period FCFE (`pv_proj_period`) and the present value of the terminal value (`pv_terminal`), you can now calculate the firm's equity value per share. To have a number comparable to the firm's stock price, we need to then calculate the equity value per share. Assume that the firm has shares outstanding (`shout`) of 15 million shares.
+
+### Instructions
+
+* Calculate aggregate equity value.
+* Calculate equity value per share.
+
+```{r echo=TRUE}
+shout <- 15
+
+# Calculate agggregate equity value
+equity_value_fcfe <- pv_proj_period + pv_terminal
+equity_value_fcfe
+
+# Calculate equity value per share
+equity_value_fcfe_per_share <- equity_value_fcfe / shout
+equity_value_fcfe_per_share
+```
+
+Well done!
+
+## Equity Value per Dividend Discount Model
+
+### Exercise
+In this exercise, you will use the dividend discount model (DDM) to value the subject firm's equity. Suppose the company pays dividends of $1 per share (`div`) annually into perpetuity and that the dividends grow each year into perpetuity at a rate of 3.0% (`pgr`). Assuming the cost of equity is 11.55% (`ke`), what is the value of the firm's equity per share?
+
+```{r echo}
+div <- 1
+pgr <- 0.03
+ke <- 0.1155
+```
+
+### Instructions
+Calculate the equity value using the DDM.
+
+```{r echo=TRUE}
+# Use DDM to Calculate Equity Value
+equity_value_ddm <- (div * (1 + pgr)) / (ke - pgr)
+equity_value_ddm
+```
+
+Great work!
+
+## Relative Valuation
+
+<video width="720" controls>
+	<source src="video/video5_03.mp4" type="video/mp4">
+</video>
+
+## Equity Value Per Price-to-Earnings Multiples
+
+### Exercise
+You analyzed the relevant comparable companies and determined that the appropriate P/E multiple to be applied to the subject firm's earnings is 8x (`p_eps_multiple`). Assuming the firm has an EPS of $1.39 (`eps`), what is the implied equity value per share of this firm?
+
+```{r echo=TRUE}
+p_eps_multiple <- 8
+eps <- 1.39
+```
+
+### Instructions
+Calculate the implied equity value.
+
+```{r echo=TRUE}
+# Calculate Implied Equity Value
+equity_value_p_e <- p_eps_multiple * eps
+equity_value_p_e
+```
+
+Alternatively, you could calculate the earnings per share (EPS) by dividing the firm's earnings by the shares outstanding first then multiplying the EPS by the P/E multiple. You should get the same answer.
+
+## Combine valuation into a summary table
+
+### Exercise
+Now that you have performed a valuation of the firm's equity using FCFE, DDM, and P/E multiples, it is time to put the equity values per share you calculated into a table. This allows you to summarize and compare the results more easily. The equity values per share for the FCFE Model, DDM, and P/E are stored in `eq_val_fcfe_per_share`, `eq_val_ddm_per_share`, and `eq_val_p_e_per_share`, respectively.
+
+```{r echo=TRUE}
+eq_val_fcfe_per_share <- 11.95
+eq_val_ddm_per_share <- 11.7
+eq_val_p_e_per_share <- 11.12
+```
+
+### Instructions
+Combine equity values per share implied by the DCF, DDM, and P/E methods into a data frame, in that order. *`check.names` is set to `FALSE` to prevent `P/E` being converted to a valid R variable name.*
+
+```{r echo=TRUE}
+# Combine equity values per share
+eq_val_per_share <- data.frame(
+  DCF = eq_val_fcfe_per_share,
+  DDM = eq_val_ddm_per_share,
+  "P/E" = eq_val_p_e_per_share,
+  check.names = FALSE
+)
+
+# See the result
+eq_val_per_share
+```
+
+Great job creating a summary table! In practice, a summary table is a great way to provide the user of your analysis with a succinct summary of the key results without having to flip through multiple different outputs.
+
+## Congratulations!
+
+<video width="720" controls>
+	<source src="video/video5_04.mp4" type="video/mp4">
+</video>

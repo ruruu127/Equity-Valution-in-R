@@ -1,0 +1,268 @@
+---
+title: "Equity Valuation in R"
+author: "Ruzaini Amiraa Roslan"
+date: "9/28/2021"
+output: html_document
+---
+
+[Link to original course](https://learn.datacamp.com/courses/equity-valuation-in-r)
+
+# Chapter 4: Relative Valuation
+Relative valuation allows us to use the valuation of comparable companies to infer the value of our subject firm. In this chapter, we discuss how to identify comparable companies and how to calculate valuation multiples. We also show how to analyze the determinants of multiples.
+
+## Relative Valuation
+
+<video width="720" controls>
+	<source src="video/video4_01.mp4" type="video/mp4">
+</video>
+
+## Identifying Comparable Firms
+
+### Exercise
+The first step in relative valuation is to identify comparable companies. Suppose you determined that the subject firm is comparable to midcap pharmaceutical companies. One definition of midcap (or middle capitalization) firms is that these are firms with market capitalization between $2 and $10 billion. Suppose you have collected information on the components of the S&P 400 Midcap Index and have stored them in the `midcap400` data object. You identified the companies classified as "Pharmaceuticals" in the `gics_subindustry` column as the appropriate industry group for your analysis. In this exercise, you are asked to extract the firms classified as "Pharmaceuticals" from the data.
+
+```{r echo=TRUE}
+load('data/midcap400.rda')
+```
+
+### Instructions
+
+* Review the first six rows of `midcap400`.
+* Extract the Pharmaceutical firms from the data using the `subset()` command.
+
+```{r echo=TRUE}
+# Review the first six rows of midcap400
+head(midcap400)
+
+# Subset Pharmaceuticals firms
+pharma <- subset(midcap400, gics_subindustry == "Pharmaceuticals")
+pharma
+```
+
+Well done!
+
+## Valuation Multiples
+
+<video width="720" controls>
+	<source src="video/video4_02.mp4" type="video/mp4">
+</video>
+
+## Calculating Valuation Multiples
+
+### Exercise
+Using the Pharmaceuitcal firms you have identified in the prior exercise (the data of which is stored in the `pharma` data object), calculate the P/LTM EPS, P/NTM EPS, and P/BVPS for the comparable companies. P is the market price of the stock, EPS is earnings per share, and BVPS is book value of equity per share.
+
+Note that, in practice, there are times when the EPS or BVPS is not populated from the commonly used databases. Therefore, you have to make sure your code is adequately flexible to only calculate multiples when the EPS or BVPS is positive. If the EPS or BVPS is not positive (i.e., less than or equal to 0), your code should set the value of that multiple equal to NA.
+
+For this exercise, you should use the `ifelse()` argument to set non-positive values equal to `NA`. Otherwise, for positive values, we can calculate the valuation multiple.
+
+### Instructions
+
+* Calculate P/LTM EPS.
+* Calculate P/NTM EPS.
+* Calculate P/BVPS.
+
+```{r echo=TRUE}
+# Calculate P/LTM EPS
+pharma$ltm_p_e <- ifelse(pharma$ltm_eps < 0, NA, pharma$price / pharma$ltm_eps)
+
+# Calculate P/NTM EPS
+pharma$ntm_p_e <- ifelse(pharma$ntm_eps < 0, NA, pharma$price / pharma$ntm_eps)
+
+# Calculate P/BVPS
+pharma$p_bv <- ifelse(pharma$bvps < 0, NA, pharma$price / pharma$bvps)
+pharma
+```
+
+Great work! This example also prepares you for real world data, which generally requires cleaning. When you get more experience with the data you are using, you will learn to idenitfy the issues that need to be flagged.
+
+## Calculating the Relevant Multiple
+
+### Exercise
+Assuming the companies selected are reasonably comparable to the subject firm, then using the average (or median) multiple may be a reasonable estimate of the valuation multiple to apply to the subject firm. The P/E and P/B multiples for each of the comparable firms are stored in the `pharma` object. For this exercise, calculate the average of each of those metrics.
+
+```{r echo=TRUE}
+pharma <- pharma[,c(1,9:11)]
+```
+
+### Instructions
+
+* Print contents of `pharma` data object.
+* Calculate the average for all the metrics in `pharma` (i.e., columns 2 through 4) using the `colMeans()` command.
+
+```{r echo=TRUE}
+# Show contents of pharma
+pharma
+
+# Calculate average multiples
+multiples <- colMeans(pharma[, 2:4], na.rm = TRUE)
+multiples
+```
+
+Great work!
+
+## Implied Price
+
+### Exercise
+Your analysis suggests that the subject firm has the following metrics: LTM EPS of $1, NTM EPS of $2, and BVPS of $8. You are asked to calculate the implied price for the subject firm, which is equal to the metric multiplied by the appropriate multiple. Assume that the data for the average P/LTM EPS (`ltm_p_e`), P/NTM EPS (`ntm_p_e`), and P/BVPS (`p_bv`) of the comparable companies are stored in the the `multiples` object.
+
+### Instructions
+
+* Create a vector for the subject firm's LTM EPS ($1), NTM EPS ($2), and BVPS ($8).
+* Calculate the implied price based on each of the three metrics by multiplying the metric by the multiple.
+
+```{r echo=TRUE}
+# Vector of metrics
+metrics <- c(1, 2, 8)
+
+# Calculate implied values
+implied_val <- metrics * multiples
+implied_val
+```
+
+Good job! A cautionary word. Remember that even if we find that a stock is overvalued or undervalued, we don't know when the stock will revert back to being fairly valued. It may take too long that we end up getting out of our position at a loss.
+
+## Analyzing Determinants of Multiples
+
+<video width="720" controls>
+	<source src="video/video4_03.mp4" type="video/mp4">
+</video>
+
+## Calculate ROE and P/B
+
+### Exercise
+Before we can analyze the relation between ROE and P/B, we have to first calculate these variables. In this exercise, we will use data for the Consumer Discretionary firms that are in the S&P 400 Midcap Index, which are stored in the `cons_disc` object. The values for `ltm_eps`, `bvps`, and `price` for each firm are also stored in `cons_disc`.
+
+```{r echo=TRUE}
+cons_disc <- subset(midcap400, gics_sector == "Consumer Discretionary")
+cons_disc
+```
+
+### Instructions
+
+* Calculate Return on Equity.
+* Calculate Price-to-Book ratio.
+* Remove missing values from `cons_disc` using `complete.cases()`.
+
+```{r echo=TRUE}
+# Calculate ROE
+cons_disc$roe <- cons_disc$ltm_eps / cons_disc$bvps
+
+# Calculate Price to Book ratio
+cons_disc$p_bv <- ifelse(cons_disc$bvps <= 0, NA, cons_disc$price / cons_disc$bvps)
+
+# Remove NA
+cons_disc_no_na <- cons_disc[complete.cases(cons_disc), ]
+head(cons_disc_no_na)
+```
+
+Well done!
+
+## Plot P/B vs. ROE
+
+### Exercise
+Now that you have calculated the ROE and P/B multiples for the midcap Consumer Discretionary firms, we can now plot the P/B multiple (y-axis) vs. ROE (x-axis). We then add a trendline to the plot to visually demonstrate the trend, if any, between the two variables. The data for `roe` and `p_bv` are in the `cons_disc` dataset.
+
+```{r echo=TRUE}
+cons_disc <- cons_disc_no_na
+```
+
+### Instructions
+
+* Set the x-axis range to make sure the entire range of ROE values are covered using `min()` and `max()`.
+* Set the y-axis range to make sure the entire range of P/B values are covered using `min()` and `max()`.
+* Plot the P/B vs. ROE data and label the x-axis "Return on Equity" and y-axis "Price-to-Book".
+* Add a trendline using the regression model using `abline()`.
+
+```{r echo=TRUE}
+# Set x-axis range
+x.range <- c(min(cons_disc$roe), 
+             max(cons_disc$roe))
+
+# Set y-axis range
+y.range <- c(min(cons_disc$p_bv), 
+             max(cons_disc$p_bv))
+
+# Plot data
+plot(y = cons_disc$p_bv,
+     x = cons_disc$roe,
+     xlab = "Return on Equity",
+     ylab = "Price-to-Book",
+     xlim = x.range,
+     ylim = y.range,
+     col = "blue",
+     main = "Price-to-Book Value and Return on Equity
+     Of Mid-Cap Consumer Discretionary Firms")
+
+# Regress roe on p_bv
+reg <- lm(p_bv ~ roe, data = cons_disc)
+
+# Add trend line in red
+abline(reg, col = "red")
+```
+
+Well done!
+
+## Strength of Relationship
+
+### Exercise
+The plot shows that there is a positive relationship between P/B and ROE. However, we may want to know how strong this relationship is from a quantitative perspective. The strength of the relationship between ROE and P/B can be determined by looking at the R-squared of the regression, which is a measure of how good the fit of the model is. In this exercise, we regress P/B on Return on Equity and output the summary of the model.
+
+Also, for use in the next exercise, store the intercept in `a` and beta in `b`.
+
+### Instructions
+
+* Call `summary()` on the regression object.
+* Store the intercept term in `a`.
+* Store beta in `b`.
+
+```{r echo=TRUE}
+# Regression model 
+reg <- lm(p_bv ~ roe, data = cons_disc)
+
+# Regression summary
+summary_reg <- summary(reg)
+summary_reg
+
+# Store intercept
+a <- summary_reg$coeff[1]
+a
+
+# Store beta
+b <- summary_reg$coeff[2]
+b
+```
+
+Good Job!
+
+## Implied Price Using Regression
+
+### Exercise
+The relationship between ROE and P/B summarized by the regression can also be used to imply the relevant P/B multiple for our subject firm and, consequently, an implied price. Assume that the subject firm ROE is 20% and its BVPS is $8. Recall that the regression intercept term and beta are stored as `a` and `b`, respectively. Using this information, calculate the implied price using the relation between ROE and P/B.
+
+### Instructions
+
+* Calculate the implied P/B multiple.
+* Calculate the implied price for the subject firm.
+
+```{r echo=TRUE}
+# Calculate implied P/B
+implied_p_b <- a + b * 0.2
+implied_p_b
+
+# Calculate implied price
+implied_price <- implied_p_b * 8
+implied_price
+```
+
+Great work! Some people are more comfortable relying on quantitative approaches, such as regression analysis, because of its perceived objectivity. However, we must remember that accepting the results still requires good judgment and blindly accepting results from quantitative approaches can lead to problems just the same way as more subjective approaches.
+
+## Difference in Implied Values
+In the prior exercise, the regression analysis of P/B multiples on ROE implies a value of $29.82 for the subject Consumer Discretionary firm. Suppose that using the average P/B multiple of Consumer Discretionary firms (i.e., the analysis in the first part of this chapter), you get an implied value of $32.38. What could be a cause of the difference between these two approaches?
+
+**Possible Answers:**
+
+* The subject firm's return on equity could be lower than 20%. (No, the 20% is a given in the problem.)
+* **The appropriate P/B multiple to apply may be lower than the peer average.**
+* P/B multiples are not appropriate for the subject firm.
+* All of the above.

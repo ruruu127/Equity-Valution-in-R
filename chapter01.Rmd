@@ -1,0 +1,204 @@
+---
+title: "Equity Valuation in R"
+author: "Ruzaini Amiraa Roslan"
+date: "9/28/2021"
+output: html_document
+---
+
+[Link to original course](https://learn.datacamp.com/courses/equity-valuation-in-r)
+
+# Chapter 1: Present Value Approaches
+Many individuals and institutions invest in equities. To do so effectively, the investor must have a solid understanding of how the value of the equity compares to the stock price. In this course, we focus on fundamental concepts of equity valuation. We begin with a discussion of time value of money and then move on to the first of two discounted cash flow methods we will discuss - the free cash flow to equity valuation model.
+
+## Course Intro and Fundamental Valuation
+
+<video width="720" controls>
+	<source src="video/video1_01.mp4" type="video/mp4">
+</video>
+
+## Time Value of Money
+
+### Exercise
+The basic premise of time value of money is that you would rather receive $1 today than $1 tomorrow, so to forego $1 today you will have to be induced to receive more than $1 in the future. How much more would it take to make you indifferent from receiving the $1 today and waiting? Let's assume that you expect to earn a 5% annual return on a comparable investment, we can use that rate to calculate the value today of receiving $1 one year from now. We can then easily extend this calculation to receiving $1 two years from now and so on. For this exercise, the variables future value `fv`, which equals $100, and the expected return `r`, which equals 5%, are stored in memory. Use these variables to calculate the present value of $100 one year from now and $100 two years from now. You will see that the farther out we go, that same $100 is worth less and less today.
+
+```{r echo=TRUE}
+fv <- 100
+r <- 0.05
+```
+
+### Instructions
+
+* Calculate the present value of $100 one year from now.
+* Calculate the present value of $100 two years from now.
+
+```{r echo=TRUE}
+# Calculate PV of $100 one year from now
+pv_1 <- fv / (1 + r)^1
+pv_1
+
+# Calculate PV of $100 two years from now
+pv_2 <- fv / (1 + r)^2
+pv_2
+```
+
+Good job! Time value money is a concept that permeates a lot of financial applications. Just remember, money today is worth more than money tomorrow.
+
+## Difference Between Valuing Enterprise and Equity Cash Flows
+When valuing the assets of the firm using cash flows attributable tot he entire company, which of the following is the appropriate discount rate to use?
+
+**Possible Answers:**
+
+* Cost of Debt
+* Cost of Equity (Cost of Equity is used to discount Equity Cash Flows)
+* Risk-Free Rate (Firm's cash flows are risky, so the Risk-Free Rate is not correct)
+* **Weighted Average Cost of Capital**
+
+That's right! The Weighted-Average Cost of Capital averages the cost of both the firm's lenders and shareholders, so it is the appropriate discount rate to use when we are discounting cash flows attributable to the entire company.
+
+## The Free Cash Flow to Equity Model
+
+<video width="720" controls>
+	<source src="video/video1_02.mp4" type="video/mp4">
+</video>
+
+## Calculating Operating Profit
+Which of the following is not equal to the firm's operating profit?
+
+**Possible Answers:**
+
+* Gross Profit - Operating Expenses (This is equal to Operating Profit)
+* Revenues - Cost of Goods Sold - Operating Expenses
+* Earnings Before Interest and Taxes (EBIT is another name for Operating Profit)
+* **Revenues - Operating Expenses**
+
+Correct! We have to also subtract Cost of Goods Sold to get to Operating Profit.
+
+## Calculate Free Cash Flow to Equity
+
+### Exercise
+After-tax income differs from free cash flow to equity (FCFE) because after-tax income is an accrual accounting concept (i.e., after-tax income includes non-cash items like depreciation and amortization) and does not exclude any additional investments (i.e., capital expenditures and increases in working capital) necessary to maintain the firm's operations and grow the firm based on its projections. Given a firm's after-tax income (`after_tax_income`), Depreciation/Amortization (`depn_amort`), capital expenditures (`capex`), and increases in working capital (`incr_wc`), calculate the free cash flow to equity. All objects in parentheses are stored in memory and are for years 2017 through 2021.
+
+```{r echo=TRUE}
+after_tax_income <- c(22.8, 24.0, 30.6, 38.4, 43.2)
+depn_amort <- c(11, 12, 12, 14, 15)
+capex <- c(11, 11, 12, 14, 15)
+incr_wc <- c(16, 16, 14, 14, 14)
+```
+
+### Instructions
+Calculate Free Cash Flow to Equity.
+
+```{r echo=TRUE}
+# Calculate FCFE
+# FCFE = Cash from Operating Activities – Capital Expenditures + Net Debt Issued (Repaid)
+fcfe <- after_tax_income - capex + depn_amort - incr_wc
+fcfe
+```
+
+Nice work! Free Cash Flow to Equity are the cash flows that the firm can pay out to its shareholders without affecting its operations.
+
+## Calculating Terminal Value
+
+### Exercise
+A firm is generally thought to have an infinite life, so although our FCFE projection only goes five years we have to come up with a method that lets us estimate the value of the FCFE beyond Year 5. The value of FCFE from Year 6 into perpetuity is called the "Terminal Value" and a common approach to estimate the Terminal Value is the Perpetuity with Growth Model, which we discussed in the video. The starting point of the Terminal Value calculation is the 2021 FCFE projection. The growth rate (`g`) of 3.4%, cost of equity (`ke`) of 10.5%, and the FCFE for 2021 from the prior exercise (`fcfe_2021`) are stored in memory.
+
+```{r echo=TRUE}
+g <- 0.034
+ke <- 0.105
+fcfe_2021 <- fcfe
+```
+
+### Instructions
+Calculate terminal value as of 2021.
+
+```{r echo=TRUE}
+# Calculate the terminal value as of 2021
+tv_2021 <- fcfe_2021 * (1 + g) / (ke - g)
+tv_2021
+```
+
+Good job! Remember that this is one of the most important calculations in valuation as much of the value in a DCF comes from the terminal value.
+
+## Calculating Equity Value
+
+<video width="720" controls>
+	<source src="video/video1_03.mp4" type="video/mp4">
+</video>
+
+## Calculating Present Value of Free Cash Flow to Equity
+
+### Exercise
+In the prior exercises, we calculated the Free Cash Flow to Equity (FCFE) projections from 2017 to 2021. In this exercise, we will discount these FCFE projections to the present. The object `fcfe` (FCFE for 2017 to 2021) and `ke` (discount rate of 10.5%) are stored in memory.
+
+```{r echo=TRUE}
+fcfe <- data.frame(fcfe = c(6.8, 9.0, 16.6, 24.4, 29.2))
+rownames(fcfe) <- c(2017:2021)
+ke <- 0.105
+```
+
+### Instructions
+
+* Add the number of discount periods for each cash flow.
+* Calculate the present value factor for each cash flow.
+* Calculate the present value of each cash flow.
+* Sum the present values of the cash flows.
+
+```{r echo=TRUE}
+# Add discount periods
+fcfe$periods <- seq(1, nrow(fcfe), 1)
+fcfe
+
+# Calculate Present Value Factor
+fcfe$pv_factor <- 1 / (1 + ke)^fcfe$periods
+fcfe
+
+# Calculate Present Value of each Cash Flow
+fcfe$pv <- fcfe$fcfe * fcfe$pv_factor
+fcfe
+
+# Total Present Value
+pv_fcfe <- sum(fcfe$pv)
+pv_fcfe
+```
+
+Nice work! We lay out the calculations in this course, so you can see each step. However, once you are familiar with the steps, you can combine a number of these calculations in practice.
+
+## Calculate Present Value of Terminal Value
+
+### Exercise
+After calculating the present value of the projection period free cash flow to equity (FCFE), we now calculate the present value of the terminal value we previously calculated (`tv_2021`). The cost of equity (`ke`) is stored in memory.
+
+### Instructions
+Calculate the present value of the terminal value.
+
+```{r echo=TRUE}
+# Calculate Present Value
+pv_tv <- tv_2021 / (1 + ke)^5
+pv_tv
+```
+
+Good work remembering that you discount the terminal value for five years. Discounting by six years is one of the most common mistakes in valuation.
+
+## Calculate Equity Value
+
+### Exercise
+Using the present value of the free cash flows from 2017 to 2021 (`pv_fcfe`) and the present value of the terminal value (`pv_tv`), calculate the equity value of the firm. Then, assuming the firm has a shares outstanding (`shout`) of 10 million shares, calculate the equity value per share.
+
+### Instructions
+
+* Calculate the firm's equity value.
+* Calculate the firm's equity value per share.
+
+```{r echo=TRUE}
+shout <- 10
+
+# Calculate Equity Value
+eq_val <- pv_fcfe + pv_tv
+eq_val
+
+# Calculate Equity Value Per Share
+eq_val_per_share <- eq_val / shout
+eq_val_per_share
+```
+
+Nice job! You have now completed the first chapter and are ready for the chapters that follow.

@@ -1,0 +1,264 @@
+---
+title: "Equity Valuation in R"
+author: "Ruzaini Amiraa Roslan"
+date: "9/28/2021"
+output: html_document
+---
+
+[Link to original course](https://learn.datacamp.com/courses/equity-valuation-in-r)
+
+# Chapter 3: Discount Rate / Cost of Capital Estimation
+To be able to discount cash flows, we need a discount rate. For the free cash flow to equity and dividend discount model, the cost of equity is the appropriate discount rate. In this chapter, we will discuss how each of the components of the cost of equity are calculated.
+
+```{r echo=TRUE}
+library(quantmod)
+```
+
+## What is a discount rate?
+
+<video width="720" controls>
+	<source src="video/video3_01.mp4" type="video/mp4">
+</video>
+
+## Risk and Return
+According to the CAPM, what is the only type of risk that investors get compensated for taking on?
+
+**Possible Answers:**
+
+* Diversifiable Risk (Investors do not get compensated for taking on diversifiable risk.)
+* **Systematic Risk**
+* Firm-specific risk (Firm-specific risk is another name for diversifiable risk.)
+* Unique Risk (Unique risk is another name for diversifiable risk.)
+
+## Calculating Returns
+
+### Exercise
+Suppose you are valuing a healthcare company and need to determine the firm's beta using peer companies. One of the peer companies you identified is Mylan (`myl`), which is a global healthcare company. In this exercise, you are asked to calculate Mylan's and the S&P 500 ETF's monthly returns over the last five years. Five years of monthly prices for `myl` and `spy` are stored in `prices`.
+
+Use the `Delt()` function to calculate returns. The `Delt()` function is from the package `quantmod`, which has also been loaded in memory. Note that the `Delt()` function requires two observations to calculate a return, so in the time series data that we have the first observation will have a missing value. Thus, after calculating the returns for the remaining dates, we want to delete that first observation (i.e., the observation with a missing return) from the data.
+
+```{r echo=TRUE}
+# Load the 'prices' data into the workspace
+load(file='data/myl_spy_prices.rda')
+```
+
+### Instructions
+
+* Show first six observations of prices.
+* Calculate monthly returns for MYL and SPY.
+* Change label of first variable to `"myl"`.
+* Remove the first observation, which is a missing value.
+
+```{r echo=TRUE}
+# Show first six observations of prices
+head(prices)
+
+# Calculate MYL monthly return
+rets <- Delt(prices$myl)
+
+# Calculate SPY monthly return
+rets$spy <- Delt(prices$spy)
+
+# Change label of first variable
+names(rets)[1] <- "myl"
+
+# Remove first observation - NA
+rets <- rets[-1, ]
+```
+
+Nice work! Remember that it's always good to look at the data before performing any analysis. You want to make sure, say, the returns are in chronological order. Otherwise, you may be dividng yesterday's price by today's price instead of today's price by yesterday's price.
+
+## Estimating Beta
+
+### Exercise
+Now that you have calculated the monthly returns, you can estimate the beta for Mylan using regression analysis. The data object `rets` you calculated previously is stored in memory.
+
+When you regress the company return (ticker: MYL) on the market index return (ticker: SPY), beta is the resulting coefficient for the market index return in that regression. In this exercise, we want to perform a regression of `myl` on `spy` using the `lm()` function and then extract the `beta` from the regression summary.
+
+Note: To extract beta, recall that it is the second element of the coefficient matrix (i.e., `coeff[2]`).
+
+### Instructions
+
+* Run a regression of MYL return on SPY return.
+* Extract beta from the regression and store in `beta` variable.
+
+```{r echo=TRUE}
+# Run regression
+reg <- lm(myl ~ spy, data = rets)
+
+# Save beta
+beta <- reg$coeff[2]
+beta
+```
+
+Great job! In is likely good practice to also take a look at the regression summary output to make sure that the beta is statistically significant.
+
+## Unlevering Betas
+
+<video width="720" controls>
+	<source src="video/video3_02.mp4" type="video/mp4">
+</video>
+
+## Hamada vs. Fernandez Formula
+Under what conditions does the Hamada and Fernandez Formula generate the same result?
+
+**Possible Answers:**
+
+* When the firm has 50% debt and 50% equity
+* When the levered beta equals one
+* You will never get the same result
+* **When the debt beta is zero**
+
+That's correct!
+
+## Beta Unlevering Exercise
+
+### Exercise
+A firm that has more debt (i.e., higher leverage) is deemed to be riskier than a firm with lower debt, so the amount of debt the firm has relative to the level of its equity would be expected to have an impact on the firm's beta. All else equal, the higher the leverage, the higher the firm's beta. To compare the risk of the overall business (i.e., the assets of the company), we have to be able to remove the effects of the firm's leverage on each firm's beta. This process is known as "unlevering betas," because we are removing the leverage from the beta.
+
+Using the Fernandez Formula from the video, unlever the Mylan beta (`myl_beta`) of 1.11 we previously calculated. In your calculations, assume that the Mylan debt-to-equity ratio (`myl_debt_eq`) is equal to 1.68, the relevant debt beta (`debt_beta`) is 0.08, and the tax rate is 40%.
+
+Note: The Unlevered Beta using the Fernandez Formula is as follows:
+
+$$(\beta_{MYL} + \beta_{D}(1 - 0.4) * D/E_{MYL} / (1 + (1 - 0.4)D/E_{MYL}))$$
+
+where the 0.40 is the assumed 40% tax rate.
+
+```{r echo=TRUE}
+myl_beta <- beta
+myl_debt_eq <- 1.68
+debt_beta <- 0.08
+```
+
+### Instructions
+
+* Calculate the Mylan Unlevered Beta.
+* Consider tax rate of 40%.
+
+```{r echo=TRUE}
+# Calculate the Mylan Unlevered Beta
+myl_unl_beta <- (myl_beta + debt_beta * (1 - 0.4) * myl_debt_eq) / (1 + (1 - 0.4) * myl_debt_eq)
+myl_unl_beta
+```
+
+Good job! Aside from the Fernandez Formula, there are other unlevering formulas you can consider that include debt, such as formulas by Miles-Ezzell and Harris-Pringle.
+
+## Beta Relevering Exercise
+
+### Exercise
+Once an unlevered beta is calculated based on comparable companies, we have to find the levered beta for the subject firm based on the subject firm's target leverage ratio. Assume you performed the same unlevering exercise on the other two comparable companies and calculated a median unlevered beta (`med_beta`) as 0.777. Further assume that the subject firm's debt-to-equity ratio (`debt_eq`) is 1.50 and that the relevant debt beta (`debt_beta`) equals 0.08. Calculate the subject firm's levered beta using the Fernandez Formula.
+
+Note that this requires you to perform a little bit of algebra from the form of the Fernandez formula in the last exercise to find the levered beta given the unlevered beta.
+
+```{r echo=TRUE}
+med_beta <- 0.777
+debt_eq <- 1.50
+debt_beta <- 0.08
+```
+
+**Formula for finding levered beta:**
+
+$$\beta_{L} = \beta_{U} + (\beta_U - \beta_D) (1-T_{c}) D/E$$
+where:
+
+* $\beta_{L}$ is the Levered Beta
+* $\beta_{U}$ is the Unlevered Beta
+* $T_{c}$ is the corporate tax rate
+* $D/E$ is the debt-to-equity ratio
+
+### Instructions
+
+* Calculate the subject firm's levered beta.
+* Consider tax rate of 40%.
+
+```{r echo=TRUE}
+# Calculate levered beta
+beta <- med_beta + (med_beta - debt_beta) * (1-0.4) * debt_eq
+beta
+```
+
+Well done!
+
+## Risk-Free Rate and Equity Risk Premium
+
+<video width="720" controls>
+	<source src="video/video3_03.mp4" type="video/mp4">
+</video>
+
+## Obtain Risk-Free Rate Data
+
+### Exercise
+A common proxy for the risk-free rate is the yield on US Treasury bonds. You can obtain the yield data from the Federal Reserve Electronic Database (FRED). For this exercise, we will use the yield on a 10-Year Constant Maturity Treasury security. The US Treasury data is stored in the data.frame object labeled `treas`, which has two variables: `date` and `yield`. Because our valuation date is the end of 2016, we need to extract the yield on December 30, 2016, which is the last trading day of 2016 and store it in the object `rf`.
+
+```{r echo=TRUE}
+load('data/fred_10yr.rda')
+```
+
+### Instructions
+
+* Extract the yield for `"2016-12-30"` from `treas`.
+* Keep only the observation in the yield column.
+* Convert from percentage terms to decimal terms.
+
+```{r echo=TRUE}
+# Review treas
+head(treas)
+
+# Extract 2016-12-30 yield 
+rf <- subset(treas, date == "2016-12-30")
+rf
+
+# Keep only the observation in the second column
+rf_yield <- rf[,"yield"]
+rf_yield
+
+# Convert yield to decimal terms
+rf_yield_dec <- rf_yield / 100
+rf_yield_dec
+```
+
+Great work!
+
+## Calculate Historical Equity Risk Premium
+
+### Exercise
+One way to calculate the Equity Risk Premium (ERP) is to use historical data. First, we calculate the annual difference between the stock market return and the US Treasury return. Second, we take the average of these annual differences. In this exercise, you will calculate the historical ERP using data from 1928 to 2016. For this exercise, we use the stock market return (`sp_500`) and US Treasury return (`tbond_10yr`) from Professor Damodaran's [website](http://www.damodaran.com/). Both these variables are stored in the object `damodaran`.
+
+```{r echo=TRUE}
+load('data/damodaran_histret.rda')
+```
+
+### Instructions
+
+* Calculate the difference between the stock return and the bond return each year.
+* Take the average or mean of the annual differences.
+
+```{r echo=TRUE}
+# Review the first six rows of damodaran
+head(damodaran)
+
+# Calculate annual difference between stocks and bonds
+diff <- damodaran$sp_500 - damodaran$tbond_10yr
+
+# Calculate ERP
+erp <- mean(diff)
+erp
+```
+
+Good Job!
+
+## Calculate the Cost of Equity
+
+### Exercise
+The most common approach to estimate the cost of equity is to use the Capital Asset Pricing Model (CAPM). The CAPM requires as inputs the subject firm's beta, risk-free rate, and equity risk premium. From the prior exercises, you calculated the subject firm's beta (`relevered_beta`), risk-free rate from FRED (`rf`), and equity risk premium (`erp`). Now, combine all these inputs to calculate the CAPM Cost of Equity.
+
+### Instructions
+Calculate the CAPM Cost of Equity.
+
+```{r echo=TRUE}
+relevered_beta <- beta
+capm_coe <- rf + relevered_beta * erp
+capm_coe
+```
+
+Great job! In practice, do not be tempted to simply add risk-free rates and ERPs that you find from various sources without understanding the details of how each input is calculated. Otherwise, you may end up having a risk-free rate and ERP that are not compatible.
